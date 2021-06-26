@@ -5,6 +5,7 @@ import {
   Container,
   Grid,
   Input,
+  Paper,
 } from '@material-ui/core';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
@@ -15,15 +16,13 @@ const Canvas = (props) => {
   const status = useScript(
     'https://cdn.jsdelivr.net/gh/wallat/compiled-opencvjs/v4.2.0/opencv.js'
   );
-  const [runProcess, setRunProcess] = useState(false);
+  // const [runProcess, setRunProcess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
+  const [palette, setPalette] = useState([]);
 
   const canvasRef = useRef();
   const imgRef = useRef();
-
-  const pika = '/raw/ash-pikachu.jpg';
-  const dahlia = '/raw/dahlia.jpg';
 
   /// set up image
   const processImage = () => {
@@ -38,11 +37,9 @@ const Canvas = (props) => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    let img = new Image(image);
-    img = imgRef.current;
+    let img = imgRef.current;
     img.src = imgRef.current.src;
 
-    // const loadImage = () => {};
     const quantizeImage = (image) => {
       // Set the canvas the same width and height of the image
 
@@ -58,7 +55,21 @@ const Canvas = (props) => {
       };
       const quantizer = new rgbquant(quantizerOptions);
       quantizer.sample(canvas);
-      let pal = quantizer.palette(false);
+
+      let paletteRGBA = quantizer.palette(false, true);
+      console.log(paletteRGBA);
+      let palette32 = [];
+      for (let i = 0; i < paletteRGBA.length; i += 4) {
+        palette32.push(
+          '#' +
+            paletteRGBA[i].toString(16).padStart(2, '0') +
+            paletteRGBA[i + 1].toString(16).toString(16).padStart(2, '0') +
+            paletteRGBA[i + 2].toString(16).toString(16).padStart(2, '0')
+          // paletteRGBA[i + 3].toString(16)
+        );
+      }
+      setPalette(palette32);
+
       let out = quantizer.reduce(canvas);
       let outImg = new ImageData(
         new Uint8ClampedArray(out),
@@ -66,6 +77,7 @@ const Canvas = (props) => {
         canvas.height
       );
       ctx.putImageData(outImg, 0, 0);
+      console.log(palette);
     };
 
     const drawEdges = (canvas) => {
@@ -106,6 +118,15 @@ const Canvas = (props) => {
     // };
   };
 
+  const fileUploadHandler = (event) => {
+    setLoading(true);
+    const file = event.target.files[0];
+    setImage(file);
+    // imgRef.src = file;
+    console.log(imgRef);
+    imgRef.current.src = window.URL.createObjectURL(file);
+  };
+
   const renderButtons = () => {
     return (
       <Grid container maxwidth="md" justify="center">
@@ -123,31 +144,41 @@ const Canvas = (props) => {
     );
   };
 
-  const fileUploadHandler = (event) => {
-    setLoading(true);
-    const file = event.target.files[0];
-    setImage(file);
-    // imgRef.src = file;
-    console.log(imgRef);
-    imgRef.current.src = window.URL.createObjectURL(file);
+  const renderPalette = () => {
+    // return a grid of rectangles filled with palette colors
+    console.log('IN RENDERPALETTE');
+    console.log(palette);
+    return (
+      <Grid container>
+        {palette.map((color) => {
+          return (
+            <Grid item xs={2} key={color}>
+              <Paper elevation={5} style={{ backgroundColor: color }}>
+                {color}
+              </Paper>
+            </Grid>
+          );
+        })}
+      </Grid>
+    );
   };
 
   return (
     <>
-      <Container maxWidth="lg">
+      <Container>
         <Grid container direction="column" alignItems="center" justify="center">
           <Grid item>{renderButtons()}</Grid>
           <Grid item>
             <Card elevation={5}>
               <CardContent>
-                <canvas width="800" height="600" ref={canvasRef} {...props} />
+                <canvas width="800" height="600" ref={canvasRef} />
               </CardContent>
             </Card>
           </Grid>
+          <Grid item>{renderPalette()}</Grid>
         </Grid>
         <img src="" ref={imgRef} alt="img" hidden={true} />
       </Container>
-      {/* <img src={pika} ref={imgRef} hidden={true} alt="img" /> */}
     </>
   );
 };
