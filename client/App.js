@@ -3,13 +3,16 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Routes from './Routes';
 
+import Container from '@material-ui/core/Container';
+
 import Canvas from './components/Canvas';
 
-const App = ({ scriptsLoadedSuccessfully }) => {
+const App = () => {
   return (
-    <div>
+    <Container maxWidth="lg">
+      <Navbar />
       <Canvas />
-    </div>
+    </Container>
   );
 };
 

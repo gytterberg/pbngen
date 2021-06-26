@@ -1,47 +1,45 @@
-import React from 'react'
-import {connect} from 'react-redux'
-import {Link} from 'react-router-dom'
-import {logout} from '../store'
+import React from 'react';
+import { Link, withRouter } from 'react-router-dom';
 
-const Navbar = ({handleClick, isLoggedIn}) => (
-  <div>
-    <h1>FS-App-Template</h1>
-    <nav>
-      {isLoggedIn ? (
-        <div>
-          {/* The navbar will show these links after you log in */}
-          <Link to="/home">Home</Link>
-          <a href="#" onClick={handleClick}>
-            Logout
-          </a>
-        </div>
-      ) : (
-        <div>
-          {/* The navbar will show these links before you log in */}
-          <Link to="/login">Login</Link>
-          <Link to="/signup">Sign Up</Link>
-        </div>
-      )}
-    </nav>
-    <hr />
-  </div>
-)
+// import Drawer from '@material-ui/core/Drawer';
 
-/**
- * CONTAINER
- */
-const mapState = state => {
-  return {
-    isLoggedIn: !!state.auth.id
-  }
-}
+import Toolbar from '@material-ui/core/Toolbar';
+import AppBar from '@material-ui/core/AppBar';
+import Typography from '@material-ui/core/Typography';
+// import Button from '@material-ui/core/Button';
+// import IconButton from '@material-ui/core/IconButton';
+// import SearchIcon from '@material-ui/icons/Search';
+// // import Link from '@material-ui/core/Link';
+// import MenuIcon from '@material-ui/icons/Menu';
+// import List from '@material-ui/core/List';
+// import Divider from '@material-ui/core/Divider';
+// import ListItem from '@material-ui/core/ListItem';
+// import ListItemIcon from '@material-ui/core/ListItemIcon';
+// import ListItemText from '@material-ui/core/ListItemText';
+// import Paper from '@material-ui/core/Paper';
+// import Tabs from '@material-ui/core/Tabs';
+// import Tab from '@material-ui/core/Tab';
+import { withStyles, useTheme } from '@material-ui/core/styles';
 
-const mapDispatch = dispatch => {
-  return {
-    handleClick() {
-      dispatch(logout())
-    }
-  }
-}
+const useStyles = (theme) => ({
+  header: {
+    position: 'sticky',
+  },
+});
 
-export default connect(mapState, mapDispatch)(Navbar)
+const Header = (props) => {
+  const { classes } = props;
+  return (
+    <React.Fragment>
+      <AppBar className={classes.header}>
+        <Toolbar>
+          <Typography variant="h5">
+            PBNgen - paint by numbers image generator
+          </Typography>
+        </Toolbar>
+      </AppBar>
+    </React.Fragment>
+  );
+};
+
+export default withRouter(withStyles(useStyles)(Header));

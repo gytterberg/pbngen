@@ -1,4 +1,13 @@
+import {
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Grid,
+  Input,
+} from '@material-ui/core';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+
 import rgbquant from 'rgbquant';
 let cv = window.cv;
 
@@ -6,34 +15,34 @@ const Canvas = (props) => {
   const status = useScript(
     'https://cdn.jsdelivr.net/gh/wallat/compiled-opencvjs/v4.2.0/opencv.js'
   );
-  const [waitForFuckingCV, setWaitForFuckingCV] = useState(false);
+  const [runProcess, setRunProcess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [image, setImage] = useState(null);
 
-  const canvasRef = useRef(null);
-  const imgRef = useRef(null);
+  const canvasRef = useRef();
+  const imgRef = useRef();
 
   const pika = '/raw/ash-pikachu.jpg';
   const dahlia = '/raw/dahlia.jpg';
 
   /// set up image
-  useEffect(() => {
-    console.log('In useeffect, status = ' + status);
+  const processImage = () => {
     cv = window.cv;
-    if (status !== 'ready' || typeof cv === 'undefined') {
+    if (
+      status !== 'ready' ||
+      typeof cv === 'undefined' ||
+      typeof image === null
+    ) {
       return;
     }
-    // if (cv) {
-    console.log('We got here');
-    console.log(cv);
-
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    let img = new Image();
+    let img = new Image(image);
     img = imgRef.current;
     img.src = imgRef.current.src;
 
-    // console.log(localImage);
-
+    // const loadImage = () => {};
     const quantizeImage = (image) => {
       // Set the canvas the same width and height of the image
 
@@ -89,30 +98,69 @@ const Canvas = (props) => {
       // have canvas/image
     };
 
-    img.onload = () => {
-      // ctx.canvas.width = img.width;
-      // ctx.canvas.height = img.height;
-      quantizeImage(img);
-      drawEdges(canvas);
-    };
-  }, [waitForFuckingCV]);
+    // imgTag.onload = () => {
+    // ctx.canvas.width = img.width;
+    // ctx.canvas.height = img.height;
+    quantizeImage(img);
+    drawEdges(canvas);
+    // };
+  };
+
+  const renderButtons = () => {
+    return (
+      <Grid container maxwidth="md" justify="center">
+        {/* row container for buttons */}
+        <input hidden type="file" id="fileInput" onChange={fileUploadHandler} />
+        <label htmlFor="fileInput">
+          <Button variant="contained" component="span">
+            Choose image
+          </Button>
+        </label>
+        <Button variant="contained" onClick={processImage}>
+          Process image
+        </Button>
+      </Grid>
+    );
+  };
+
+  const fileUploadHandler = (event) => {
+    setLoading(true);
+    const file = event.target.files[0];
+    setImage(file);
+    // imgRef.src = file;
+    console.log(imgRef);
+    imgRef.current.src = window.URL.createObjectURL(file);
+  };
 
   return (
     <>
-      <canvas width="10" height="10" ref={canvasRef} {...props} />
-      <img src={dahlia} ref={imgRef} hidden={true} alt="img" />
-      <button
-        onClick={() => {
-          console.log('clicked');
-          setWaitForFuckingCV(true);
-        }}
-      >
-        Hopefully OpenCV is loaded ¯\_(ツ)_/¯
-      </button>
+      <Container maxWidth="lg">
+        <Grid container direction="column" alignItems="center" justify="center">
+          <Grid item>{renderButtons()}</Grid>
+          <Grid item>
+            <Card elevation={5}>
+              <CardContent>
+                <canvas width="800" height="600" ref={canvasRef} {...props} />
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+        <img src="" ref={imgRef} alt="img" hidden={true} />
+      </Container>
       {/* <img src={pika} ref={imgRef} hidden={true} alt="img" /> */}
     </>
   );
 };
+
+/*
+ *
+ *
+ *
+ * script loading hook below
+ *
+ *
+ *
+ */
 
 // Hook from https://usehooks.com/useScript/
 function useScript(src) {
