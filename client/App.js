@@ -9,7 +9,7 @@ import Canvas from './components/Canvas';
 
 const App = () => {
   return (
-    <Container maxWidth="lg">
+    <Container>
       <Navbar />
       <Canvas />
     </Container>

@@ -1,11 +1,14 @@
 import {
+  Box,
   Button,
   Card,
   CardContent,
+  CardMedia,
   Container,
   Grid,
   Input,
   Paper,
+  Typography,
 } from '@material-ui/core';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
@@ -65,7 +68,6 @@ const Canvas = (props) => {
             paletteRGBA[i].toString(16).padStart(2, '0') +
             paletteRGBA[i + 1].toString(16).toString(16).padStart(2, '0') +
             paletteRGBA[i + 2].toString(16).toString(16).padStart(2, '0')
-          // paletteRGBA[i + 3].toString(16)
         );
       }
       setPalette(palette32);
@@ -77,7 +79,6 @@ const Canvas = (props) => {
         canvas.height
       );
       ctx.putImageData(outImg, 0, 0);
-      console.log(palette);
     };
 
     const drawEdges = (canvas) => {
@@ -106,16 +107,8 @@ const Canvas = (props) => {
       dest.delete();
     };
 
-    const whiteToTransparent = () => {
-      // have canvas/image
-    };
-
-    // imgTag.onload = () => {
-    // ctx.canvas.width = img.width;
-    // ctx.canvas.height = img.height;
     quantizeImage(img);
     drawEdges(canvas);
-    // };
   };
 
   const fileUploadHandler = (event) => {
@@ -129,32 +122,64 @@ const Canvas = (props) => {
 
   const renderButtons = () => {
     return (
-      <Grid container maxwidth="md" justify="center">
+      <Grid container direction="column" alignItems="center">
         {/* row container for buttons */}
-        <input hidden type="file" id="fileInput" onChange={fileUploadHandler} />
-        <label htmlFor="fileInput">
-          <Button variant="contained" component="span">
-            Choose image
+        <Grid item xs={10}>
+          <input
+            hidden
+            type="file"
+            id="fileInput"
+            onChange={fileUploadHandler}
+          />
+          <label htmlFor="fileInput">
+            <Button fullWidth variant="contained" component="span">
+              Choose image
+            </Button>
+          </label>
+        </Grid>
+        <Grid xs={10}>
+          <Button fullWidth variant="contained" onClick={processImage}>
+            Process image
           </Button>
-        </label>
-        <Button variant="contained" onClick={processImage}>
-          Process image
-        </Button>
+        </Grid>
       </Grid>
     );
   };
 
   const renderPalette = () => {
     // return a grid of rectangles filled with palette colors
+    const contrastTextColor = (hexColor) => {
+      // hexColor is like #818283
+      let Rdec = parseInt('0x' + hexColor.slice(1, 3)); // R value, 0x81
+      let Gdec = parseInt('0x' + hexColor.slice(3, 5)); // G value, 0x82
+      let Bdec = parseInt('0x' + hexColor.slice(5, 7)); // B value, 0x83
+      // if (Rdec < 100 && Gdec < 100 && Bdec < 100) {
+      if (Rdec + Gdec + Bdec < 350) {
+        return '#E8E8E8';
+      } else {
+        return '#484848';
+      }
+    };
+
     console.log('IN RENDERPALETTE');
     console.log(palette);
     return (
-      <Grid container>
-        {palette.map((color) => {
+      <Grid container direction="column">
+        {palette.map((color, index) => {
           return (
-            <Grid item xs={2} key={color}>
-              <Paper elevation={5} style={{ backgroundColor: color }}>
-                {color}
+            <Grid item xs={12} key={color}>
+              <Paper
+                elevation={5}
+                style={{
+                  backgroundColor: color,
+                }}
+              >
+                <Typography
+                  style={{ color: contrastTextColor(color) }}
+                  align="center"
+                >
+                  {(index + 1).toString() + ' - ' + color.toUpperCase()}
+                </Typography>
               </Paper>
             </Grid>
           );
@@ -165,20 +190,34 @@ const Canvas = (props) => {
 
   return (
     <>
-      <Container>
-        <Grid container direction="column" alignItems="center" justify="center">
-          <Grid item>{renderButtons()}</Grid>
-          <Grid item>
-            <Card elevation={5}>
-              <CardContent>
-                <canvas width="800" height="600" ref={canvasRef} />
-              </CardContent>
+      <Grid container direction="column">
+        <Grid
+          container
+          direction="row"
+          // alignItems="center"
+          // justifyContent="center"
+        >
+          <Grid xs={2} item>
+            {renderButtons()}
+          </Grid>
+          <Grid item xs={8}>
+            <Card>
+              <Grid container justifyContent="center" alignItems="center">
+                <Grid item xs={12}>
+                  <canvas width="800" height="600" ref={canvasRef} />
+                </Grid>
+              </Grid>
             </Card>
           </Grid>
-          <Grid item>{renderPalette()}</Grid>
+          <Grid item xs={2}>
+            {renderPalette()}
+          </Grid>
         </Grid>
-        <img src="" ref={imgRef} alt="img" hidden={true} />
-      </Container>
+
+        <Grid item>
+          <img src="" ref={imgRef} alt="img" hidden={true} />
+        </Grid>
+      </Grid>
     </>
   );
 };
