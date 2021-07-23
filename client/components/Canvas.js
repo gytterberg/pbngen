@@ -13,7 +13,7 @@ import {
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import rgbquant from 'rgbquant';
-let cv = window.cv;
+const cv = window.cv;
 
 const Canvas = (props) => {
   const status = useScript(
@@ -23,6 +23,14 @@ const Canvas = (props) => {
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
   const [palette, setPalette] = useState([]);
+  const [params, setParams] = useState({
+    contrast: 175,
+    blur: 7,
+    threshold1: 50,
+    threshold2: 100,
+    apertureSize: 3,
+    l2Gradient: false,
+  });
 
   const canvasRef = useRef();
   const imgRef = useRef();
@@ -49,7 +57,8 @@ const Canvas = (props) => {
       canvas.width = image.width;
       canvas.height = image.height;
 
-      ctx.filter = 'contrast(175%) blur(7px)';
+      // filter params string
+      ctx.filter = `contrast(${params.contrast})% blur(${params.blur}px)`;
 
       ctx.drawImage(image, 0, 0);
 
