@@ -15,6 +15,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import rgbquant from 'rgbquant';
 const cv = window.cv;
 
+import Quantizer from '../processing/quantizer';
+
 const Canvas = (props) => {
   const status = useScript(
     'https://cdn.jsdelivr.net/gh/wallat/compiled-opencvjs/v4.2.0/opencv.js'
@@ -37,14 +39,15 @@ const Canvas = (props) => {
 
   /// set up image
   const processImage = () => {
-    cv = window.cv;
-    if (
-      status !== 'ready' ||
-      typeof cv === 'undefined' ||
-      typeof image === null
-    ) {
-      return;
-    }
+    console.log('In processImage');
+    // cv = window.cv;
+    // if (
+    //   status !== 'ready' ||
+    //   typeof cv === 'undefined' ||
+    //   typeof image === null
+    // ) {
+    //   return;
+    // }
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
@@ -65,59 +68,67 @@ const Canvas = (props) => {
       const quantizerOptions = {
         colors: 16,
       };
-      const quantizer = new rgbquant(quantizerOptions);
-      quantizer.sample(canvas);
+      // const quantizer = new rgbquant(quantizerOptions);
+      // quantizer.sample(canvas);
 
-      let paletteRGBA = quantizer.palette(false, true);
-      console.log(paletteRGBA);
-      let palette32 = [];
-      for (let i = 0; i < paletteRGBA.length; i += 4) {
-        palette32.push(
-          '#' +
-            paletteRGBA[i].toString(16).padStart(2, '0') +
-            paletteRGBA[i + 1].toString(16).toString(16).padStart(2, '0') +
-            paletteRGBA[i + 2].toString(16).toString(16).padStart(2, '0')
-        );
-      }
-      setPalette(palette32);
+      // let paletteRGBA = quantizer.palette(false, true);
+      // console.log(paletteRGBA);
+      // let palette32 = [];
+      // for (let i = 0; i < paletteRGBA.length; i += 4) {
+      //   palette32.push(
+      //     '#' +
+      //       paletteRGBA[i].toString(16).padStart(2, '0') +
+      //       paletteRGBA[i + 1].toString(16).toString(16).padStart(2, '0') +
+      //       paletteRGBA[i + 2].toString(16).toString(16).padStart(2, '0')
+      //   );
+      // }
+      // setPalette(palette32);
 
-      let out = quantizer.reduce(canvas);
-      let outImg = new ImageData(
-        new Uint8ClampedArray(out),
-        canvas.width,
-        canvas.height
-      );
-      ctx.putImageData(outImg, 0, 0);
-    };
-
-    const drawEdges = (canvas) => {
-      // let quantizedImgData = ctx.getImageData(
-      //   0,
-      //   0,
+      // let out = quantizer.reduce(canvas);
+      // let outImg = new ImageData(
+      //   new Uint8ClampedArray(out),
       //   canvas.width,
       //   canvas.height
       // );
-
-      const source = cv.imread(canvas); // load the image from <img>
-      const dest = new cv.Mat();
-
-      // turn image grayscale for edge detection
-      cv.cvtColor(source, source, cv.COLOR_RGB2GRAY, 0);
-
-      // detect edges, keep playing with parameters
-      cv.Canny(source, dest, 50, 100, 3, false);
-
-      // invert image, turn lines black
-      cv.bitwise_not(dest, dest);
-
-      cv.imshow(canvas, dest); // display the output to canvas
-
-      source.delete(); // remember to free the memory
-      dest.delete();
+      // ctx.putImageData(outImg, 0, 0);
+      const quantizer = new Quantizer(canvas);
+      quantizer.quantize(16);
     };
 
+    // const drawEdges = (canvas) => {
+    //   // let quantizedImgData = ctx.getImageData(
+    //   //   0,
+    //   //   0,
+    //   //   canvas.width,
+    //   //   canvas.height
+    //   // );
+
+    //   const source = cv.imread(canvas); // load the image from <img>
+    //   const dest = new cv.Mat();
+
+    //   // turn image grayscale for edge detection
+    //   cv.cvtColor(source, source, cv.COLOR_RGB2GRAY, 0);
+
+    //   // detect edges, keep playing with parameters
+    //   cv.Canny(source, dest, 50, 100, 3, false);
+
+    //   // invert image, turn lines black
+    //   cv.bitwise_not(dest, dest);
+
+    //   cv.imshow(canvas, dest); // display the output to canvas
+
+    //   source.delete(); // remember to free the memory
+    //   dest.delete();
+    // };
+
+    // quantizeImage(img);
+
+    // const quantizer = new Quantizer();
+
+    // const imageWithPalette = quantizer.quantize(pixels, colors);
+
     quantizeImage(img);
-    drawEdges(canvas);
+    // drawEdges(canvas);
   };
 
   const fileUploadHandler = (event) => {
@@ -155,47 +166,47 @@ const Canvas = (props) => {
     );
   };
 
-  const renderPalette = () => {
-    // return a grid of rectangles filled with palette colors
-    const contrastTextColor = (hexColor) => {
-      // hexColor is like #818283
-      let Rdec = parseInt('0x' + hexColor.slice(1, 3)); // R value, 0x81
-      let Gdec = parseInt('0x' + hexColor.slice(3, 5)); // G value, 0x82
-      let Bdec = parseInt('0x' + hexColor.slice(5, 7)); // B value, 0x83
-      // if (Rdec < 100 && Gdec < 100 && Bdec < 100) {
-      if (Rdec + Gdec + Bdec < 350) {
-        return '#E8E8E8';
-      } else {
-        return '#484848';
-      }
-    };
+  // const renderPalette = () => {
+  //   // return a grid of rectangles filled with palette colors
+  //   const contrastTextColor = (hexColor) => {
+  //     // hexColor is like #818283
+  //     let Rdec = parseInt('0x' + hexColor.slice(1, 3)); // R value, 0x81
+  //     let Gdec = parseInt('0x' + hexColor.slice(3, 5)); // G value, 0x82
+  //     let Bdec = parseInt('0x' + hexColor.slice(5, 7)); // B value, 0x83
+  //     // if (Rdec < 100 && Gdec < 100 && Bdec < 100) {
+  //     if (Rdec + Gdec + Bdec < 350) {
+  //       return '#E8E8E8';
+  //     } else {
+  //       return '#484848';
+  //     }
+  //   };
 
-    console.log('IN RENDERPALETTE');
-    console.log(palette);
-    return (
-      <Grid container direction="column">
-        {palette.map((color, index) => {
-          return (
-            <Grid item xs={12} key={color}>
-              <Paper
-                elevation={5}
-                style={{
-                  backgroundColor: color,
-                }}
-              >
-                <Typography
-                  style={{ color: contrastTextColor(color) }}
-                  align="center"
-                >
-                  {(index + 1).toString() + ' - ' + color.toUpperCase()}
-                </Typography>
-              </Paper>
-            </Grid>
-          );
-        })}
-      </Grid>
-    );
-  };
+  //   console.log('IN RENDERPALETTE');
+  //   console.log(palette);
+  //   return (
+  //     <Grid container direction="column">
+  //       {palette.map((color, index) => {
+  //         return (
+  //           <Grid item xs={12} key={color}>
+  //             <Paper
+  //               elevation={5}
+  //               style={{
+  //                 backgroundColor: color,
+  //               }}
+  //             >
+  //               <Typography
+  //                 style={{ color: contrastTextColor(color) }}
+  //                 align="center"
+  //               >
+  //                 {(index + 1).toString() + ' - ' + color.toUpperCase()}
+  //               </Typography>
+  //             </Paper>
+  //           </Grid>
+  //         );
+  //       })}
+  //     </Grid>
+  //   );
+  // };
 
   return (
     <>
@@ -218,9 +229,9 @@ const Canvas = (props) => {
               </Grid>
             </Card>
           </Grid>
-          <Grid item xs={2}>
+          {/* <Grid item xs={2}>
             {renderPalette()}
-          </Grid>
+          </Grid> */}
         </Grid>
 
         <Grid item>
