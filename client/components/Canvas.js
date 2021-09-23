@@ -13,14 +13,12 @@ import {
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import rgbquant from 'rgbquant';
-const cv = window.cv;
 
 const Canvas = (props) => {
   const status = useScript(
     'https://cdn.jsdelivr.net/gh/wallat/compiled-opencvjs/v4.2.0/opencv.js'
   );
-  // const [runProcess, setRunProcess] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
   const [palette, setPalette] = useState([]);
   const [params, setParams] = useState({
@@ -36,8 +34,14 @@ const Canvas = (props) => {
   const imgRef = useRef();
 
   /// set up image
+  const drawImage = () => {
+    canvasRef.current.getContext('2d').drawImage(imgRef.current, 0, 0);
+  };
+
   const processImage = () => {
-    cv = window.cv;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const cv = window.cv;
     if (
       status !== 'ready' ||
       typeof cv === 'undefined' ||
@@ -45,22 +49,11 @@ const Canvas = (props) => {
     ) {
       return;
     }
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
 
-    let img = imgRef.current;
-    img.src = imgRef.current.src;
-
-    const quantizeImage = (image) => {
+    const quantizeImage = () => {
       // Set the canvas the same width and height of the image
-
-      canvas.width = image.width;
-      canvas.height = image.height;
-
       // filter params string
       ctx.filter = `contrast(${params.contrast})% blur(${params.blur}px)`;
-
-      ctx.drawImage(image, 0, 0);
 
       const quantizerOptions = {
         colors: 16,
@@ -90,14 +83,7 @@ const Canvas = (props) => {
       ctx.putImageData(outImg, 0, 0);
     };
 
-    const drawEdges = (canvas) => {
-      // let quantizedImgData = ctx.getImageData(
-      //   0,
-      //   0,
-      //   canvas.width,
-      //   canvas.height
-      // );
-
+    const drawEdges = () => {
       const source = cv.imread(canvas); // load the image from <img>
       const dest = new cv.Mat();
 
@@ -116,16 +102,15 @@ const Canvas = (props) => {
       dest.delete();
     };
 
-    quantizeImage(img);
-    drawEdges(canvas);
+    quantizeImage();
+    drawEdges();
   };
 
   const fileUploadHandler = (event) => {
-    setLoading(true);
+    // setLoading(true);
     const file = event.target.files[0];
     setImage(file);
-    // imgRef.src = file;
-    console.log(imgRef);
+    console.log(imgRef.current);
     imgRef.current.src = window.URL.createObjectURL(file);
   };
 
@@ -146,7 +131,8 @@ const Canvas = (props) => {
             </Button>
           </label>
         </Grid>
-        <Grid xs={10}>
+        <Grid>
+          {/* <Grid xs={10}> */}
           <Button fullWidth variant="contained" onClick={processImage}>
             Process image
           </Button>
@@ -211,7 +197,8 @@ const Canvas = (props) => {
           </Grid>
           <Grid item xs={8}>
             <Card>
-              <Grid container justifyContent="center" alignItems="center">
+              <Grid container alignItems="center">
+                {/* justifyContent="center" */}
                 <Grid item xs={12}>
                   <canvas width="800" height="600" ref={canvasRef} />
                 </Grid>
@@ -224,7 +211,7 @@ const Canvas = (props) => {
         </Grid>
 
         <Grid item>
-          <img src="" ref={imgRef} alt="img" hidden={true} />
+          <img onLoad={drawImage} src="" ref={imgRef} alt="img" hidden={true} />
         </Grid>
       </Grid>
     </>
