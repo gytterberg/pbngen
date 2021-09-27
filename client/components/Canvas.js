@@ -35,7 +35,36 @@ const Canvas = (props) => {
 
   /// set up image
   const drawImage = () => {
-    canvasRef.current.getContext('2d').drawImage(imgRef.current, 0, 0);
+    const canvas = canvasRef.current;
+    const image = imgRef.current;
+    // is image smaller or larger than the canvas?
+    if (canvas.height < image.height || canvas.width < image.width) {
+      // scale image
+      const canvasRatio = canvas.height / canvas.width;
+      const imageRatio = image.naturalHeight / image.naturalWidth;
+      let scaledHeight = canvas.height;
+      let scaledWidth = canvas.width;
+      if (canvasRatio < imageRatio) {
+        // image height needs to fill canvas height
+        scaledWidth = canvas.width / imageRatio;
+      } else {
+        scaledHeight = canvas.height / imageRatio;
+        // image width needs to fill canvas width
+      }
+
+      const x = Math.floor(canvas.width / 2) - Math.floor(scaledWidth / 2);
+      const y = Math.floor(canvas.height / 2) - Math.floor(scaledHeight / 2);
+
+      canvas.getContext('2d').drawImage(image, x, y, scaledWidth, scaledHeight);
+    } else {
+      // draw image centered
+      const x = Math.floor(canvas.width / 2) - Math.floor(image.width / 2);
+      const y = Math.floor(canvas.height / 2) - Math.floor(image.height / 2);
+      canvas.getContext('2d').drawImage(image, x, y);
+    }
+
+    console.log(canvasRef);
+    console.log(imgRef);
   };
 
   const processImage = () => {
@@ -132,7 +161,6 @@ const Canvas = (props) => {
           </label>
         </Grid>
         <Grid>
-          {/* <Grid xs={10}> */}
           <Button fullWidth variant="contained" onClick={processImage}>
             Process image
           </Button>
@@ -156,8 +184,6 @@ const Canvas = (props) => {
       }
     };
 
-    console.log('IN RENDERPALETTE');
-    console.log(palette);
     return (
       <Grid container direction="column">
         {palette.map((color, index) => {
