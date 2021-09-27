@@ -37,7 +37,7 @@ const Canvas = (props) => {
   const drawImage = () => {
     const canvas = canvasRef.current;
     const image = imgRef.current;
-    // is image smaller or larger than the canvas?
+    // do we need to scale the image?
     if (canvas.height < image.height || canvas.width < image.width) {
       // scale image
       const canvasRatio = canvas.height / canvas.width;
@@ -46,9 +46,9 @@ const Canvas = (props) => {
       let scaledWidth = canvas.width;
       if (canvasRatio < imageRatio) {
         // image height needs to fill canvas height
-        scaledWidth = canvas.width / imageRatio;
+        scaledWidth = canvas.height / imageRatio;
       } else {
-        scaledHeight = canvas.height / imageRatio;
+        scaledHeight = canvas.width / imageRatio;
         // image width needs to fill canvas width
       }
 
@@ -57,14 +57,11 @@ const Canvas = (props) => {
 
       canvas.getContext('2d').drawImage(image, x, y, scaledWidth, scaledHeight);
     } else {
-      // draw image centered
+      // don't scale, just draw image centered
       const x = Math.floor(canvas.width / 2) - Math.floor(image.width / 2);
       const y = Math.floor(canvas.height / 2) - Math.floor(image.height / 2);
       canvas.getContext('2d').drawImage(image, x, y);
     }
-
-    console.log(canvasRef);
-    console.log(imgRef);
   };
 
   const processImage = () => {
