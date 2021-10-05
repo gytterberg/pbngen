@@ -9,7 +9,17 @@ import {
   Input,
   Paper,
   Typography,
+  Slider,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  RadioGroup,
+  Radio,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@material-ui/core';
+import { ExpandMoreIcon } from '@mui/icons-material';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import rgbquant from 'rgbquant';
@@ -21,9 +31,12 @@ const Canvas = (props) => {
   // const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
   const [palette, setPalette] = useState([]);
+  // display options: original, preprocessed, quantized, edges
+  const [display, setDisplay] = useState('original');
+
   const [params, setParams] = useState({
-    contrast: 175,
-    blur: 7,
+    contrast: 175, // 175
+    blur: 7, // 7
     threshold1: 50,
     threshold2: 100,
     apertureSize: 3,
@@ -32,39 +45,98 @@ const Canvas = (props) => {
 
   const canvasRef = useRef();
   const imgRef = useRef();
+  const canvasContainerRef = useRef();
 
-  /// set up image
-  const drawImage = () => {
+  /*
+   *
+   *
+   *   Image processing
+   *
+   *
+   *
+   *
+   */
+  const drawImage = (options = { filter: true }) => {
     const canvas = canvasRef.current;
     const image = imgRef.current;
+    const ctx = canvas.getContext('2d');
+
+    console.log('Canvas container:', canvasContainerRef);
+
+    // have max width of canvas in canvasContainerRef
+    if (options.filter) {
+      ctx.filter = `contrast(${params.contrast}%) blur(${params.blur}px)`;
+    } else {
+      ctx.filter = 'none';
+    }
+
     // do we need to scale the image?
-    if (canvas.height < image.height || canvas.width < image.width) {
+    if (canvasContainerRef.current.offsetWidth < image.width) {
       // scale image
-      const canvasRatio = canvas.height / canvas.width;
       const imageRatio = image.naturalHeight / image.naturalWidth;
-      let scaledHeight = canvas.height;
-      let scaledWidth = canvas.width;
-      if (canvasRatio < imageRatio) {
-        // image height needs to fill canvas height
-        scaledWidth = canvas.height / imageRatio;
+      let scaledHeight = canvasContainerRef.current.offsetWidth * imageRatio;
+      let scaledWidth = canvasContainerRef.current.offsetWidth;
+      canvas.width = scaledWidth;
+      canvas.height = scaledHeight;
+      if (options.filter) {
+        ctx.filter = `contrast(${params.contrast}%) blur(${params.blur}px)`;
       } else {
-        scaledHeight = canvas.width / imageRatio;
-        // image width needs to fill canvas width
+        ctx.filter = 'none';
       }
 
-      const x = Math.floor(canvas.width / 2) - Math.floor(scaledWidth / 2);
-      const y = Math.floor(canvas.height / 2) - Math.floor(scaledHeight / 2);
-
-      canvas.getContext('2d').drawImage(image, x, y, scaledWidth, scaledHeight);
+      ctx.drawImage(image, 0, 0, scaledWidth, scaledHeight);
     } else {
-      // don't scale, just draw image centered
-      const x = Math.floor(canvas.width / 2) - Math.floor(image.width / 2);
-      const y = Math.floor(canvas.height / 2) - Math.floor(image.height / 2);
-      canvas.getContext('2d').drawImage(image, x, y);
+      // don't scale
+      canvas.width = image.width;
+      canvas.height = image.height;
+      if (options.filter) {
+        ctx.filter = `contrast(${params.contrast}%) blur(${params.blur}px)`;
+      }
+      ctx.drawImage(image, 0, 0);
     }
   };
 
-  const processImage = () => {
+  const preprocessImage = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    drawImage({ filter: true });
+  };
+
+  const quantizeImage = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const image = imgRef.current;
+
+    drawImage({ filter: true });
+
+    const quantizerOptions = {
+      colors: 16,
+    };
+    const quantizer = new rgbquant(quantizerOptions);
+    quantizer.sample(canvas);
+    let paletteRGBA = quantizer.palette(false, true);
+    let palette32 = [];
+    for (let i = 0; i < paletteRGBA.length; i += 4) {
+      palette32.push(
+        '#' +
+          paletteRGBA[i].toString(16).padStart(2, '0') +
+          paletteRGBA[i + 1].toString(16).toString(16).padStart(2, '0') +
+          paletteRGBA[i + 2].toString(16).toString(16).padStart(2, '0')
+      );
+    }
+    setPalette(palette32);
+
+    let out = quantizer.reduce(canvas);
+    let outImg = new ImageData(
+      new Uint8ClampedArray(out),
+      canvas.width,
+      canvas.height
+    );
+
+    ctx.putImageData(outImg, 0, 0);
+  };
+
+  const processEdges = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const cv = window.cv;
@@ -75,76 +147,83 @@ const Canvas = (props) => {
     ) {
       return;
     }
-
-    const quantizeImage = () => {
-      // Set the canvas the same width and height of the image
-      // filter params string
-      ctx.filter = `contrast(${params.contrast})% blur(${params.blur}px)`;
-
-      const quantizerOptions = {
-        colors: 16,
-      };
-      const quantizer = new rgbquant(quantizerOptions);
-      quantizer.sample(canvas);
-
-      let paletteRGBA = quantizer.palette(false, true);
-      console.log(paletteRGBA);
-      let palette32 = [];
-      for (let i = 0; i < paletteRGBA.length; i += 4) {
-        palette32.push(
-          '#' +
-            paletteRGBA[i].toString(16).padStart(2, '0') +
-            paletteRGBA[i + 1].toString(16).toString(16).padStart(2, '0') +
-            paletteRGBA[i + 2].toString(16).toString(16).padStart(2, '0')
-        );
-      }
-      setPalette(palette32);
-
-      let out = quantizer.reduce(canvas);
-      let outImg = new ImageData(
-        new Uint8ClampedArray(out),
-        canvas.width,
-        canvas.height
-      );
-      ctx.putImageData(outImg, 0, 0);
-    };
-
-    const drawEdges = () => {
-      const source = cv.imread(canvas); // load the image from <img>
-      const dest = new cv.Mat();
-
-      // turn image grayscale for edge detection
-      cv.cvtColor(source, source, cv.COLOR_RGB2GRAY, 0);
-
-      // detect edges, keep playing with parameters
-      cv.Canny(source, dest, 50, 100, 3, false);
-
-      // invert image, turn lines black
-      cv.bitwise_not(dest, dest);
-
-      cv.imshow(canvas, dest); // display the output to canvas
-
-      source.delete(); // remember to free the memory
-      dest.delete();
-    };
-
     quantizeImage();
-    drawEdges();
+    const source = cv.imread(canvas); // load the image from <img>
+    const dest = new cv.Mat();
+
+    // turn image grayscale for edge detection
+    cv.cvtColor(source, source, cv.COLOR_RGB2GRAY, 0);
+
+    // detect edges, keep playing with parameters
+    cv.Canny(source, dest, 50, 100, 3, false);
+
+    // invert image, turn lines black
+    cv.bitwise_not(dest, dest);
+
+    cv.imshow(canvas, dest); // display the output to canvas
+
+    source.delete(); // remember to free the memory
+    dest.delete();
   };
 
   const fileUploadHandler = (event) => {
     // setLoading(true);
     const file = event.target.files[0];
     setImage(file);
-    console.log(imgRef.current);
     imgRef.current.src = window.URL.createObjectURL(file);
   };
 
-  const renderButtons = () => {
+  /*
+   *   ^^ End image processing
+   *
+   *
+   *
+   *
+   *
+   *   vv Event handlers
+   */
+
+  const handleParamChange = (param, value) => {
+    params[param] = value;
+    setParams(params);
+    setDisplay('preprocessed');
+    preprocessImage();
+  };
+
+  const handleDisplayChange = (value) => {
+    // display options: original, preprocessed, quantized, edges
+    setDisplay(value);
+    switch (value) {
+      case 'original':
+        drawImage({ filter: false });
+        break;
+      case 'preprocessed':
+        preprocessImage();
+        break;
+      case 'quantized':
+        quantizeImage();
+        break;
+      case 'edges':
+        processEdges();
+        break;
+    }
+  };
+
+  /*
+   *   ^^ End event handlers
+   *
+   *
+   *
+   *
+   *
+   *   vv Rendering
+   */
+
+  const renderControls = () => {
     return (
-      <Grid container direction="column" alignItems="center">
+      <Grid container direction="column" alignItems="stretch">
         {/* row container for buttons */}
-        <Grid item xs={10}>
+        <Grid item>
           <input
             hidden
             type="file"
@@ -157,10 +236,107 @@ const Canvas = (props) => {
             </Button>
           </label>
         </Grid>
-        <Grid>
-          <Button fullWidth variant="contained" onClick={processImage}>
+        <Grid item>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => {
+              setDisplay('edges');
+              processEdges();
+            }}
+          >
             Process image
           </Button>
+        </Grid>
+
+        <Grid item>
+          <FormControl component="fieldset">
+            {/* <FormLabel component="legend">Display</FormLabel> */}
+            <RadioGroup
+              aria-label="display"
+              value={display}
+              name="radio-buttons-group"
+              onChange={(event, value) => handleDisplayChange(value)}
+            >
+              {console.log('Value of display: ' + display)}
+              <FormControlLabel
+                value="original"
+                control={<Radio />}
+                label="Original image"
+              />
+              <FormControlLabel
+                value="preprocessed"
+                control={<Radio />}
+                label="Preprocessed image"
+              />
+              <FormControlLabel
+                value="quantized"
+                control={<Radio />}
+                label="Quantized image"
+              />
+              <FormControlLabel
+                value="edges"
+                control={<Radio />}
+                label="Final image"
+              />
+            </RadioGroup>
+          </FormControl>
+        </Grid>
+      </Grid>
+    );
+  };
+
+  const renderParamControls = () => {
+    // param: contrast
+    // param: blur
+    return (
+      <Grid container direction="row">
+        <Grid item xs={1}></Grid>
+        <Grid item xs={10}>
+          <Grid container direction="column" alignItems="stretch">
+            <Grid item>
+              <Typography>Contrast</Typography>
+              <Slider
+                key={'slider-contrast-' + params.contrast}
+                // value={params.contrast}
+                defaultValue={params.contrast}
+                min={0}
+                max={200}
+                valueLabelDisplay="auto"
+                onChange={(event, value) =>
+                  handleParamChange('contrast', value)
+                }
+              />
+            </Grid>
+
+            <Grid item>
+              <Typography>Blur</Typography>
+              <Slider
+                key={'slider-blur-' + params.blur}
+                // value={params.contrast}
+                defaultValue={params.blur}
+                min={0}
+                max={20}
+                valueLabelDisplay="auto"
+                onChange={(event, value) => handleParamChange('blur', value)}
+              />
+            </Grid>
+
+            <Grid item>
+              <Typography>Contrast</Typography>
+              <Slider
+                key={'slider' + params.contrast}
+                // value={params.contrast}
+                defaultValue={params.contrast}
+                min={0}
+                max={200}
+                valueLabelDisplay="auto"
+                onChange={(event, value) =>
+                  handleParamChange('contrast', value)
+                }
+              />
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
     );
@@ -173,7 +349,6 @@ const Canvas = (props) => {
       let Rdec = parseInt('0x' + hexColor.slice(1, 3)); // R value, 0x81
       let Gdec = parseInt('0x' + hexColor.slice(3, 5)); // G value, 0x82
       let Bdec = parseInt('0x' + hexColor.slice(5, 7)); // B value, 0x83
-      // if (Rdec < 100 && Gdec < 100 && Bdec < 100) {
       if (Rdec + Gdec + Bdec < 350) {
         return '#E8E8E8';
       } else {
@@ -182,60 +357,67 @@ const Canvas = (props) => {
     };
 
     return (
-      <Grid container direction="column">
-        {palette.map((color, index) => {
-          return (
-            <Grid item xs={12} key={color}>
-              <Paper
-                elevation={5}
-                style={{
-                  backgroundColor: color,
-                }}
-              >
-                <Typography
-                  style={{ color: contrastTextColor(color) }}
-                  align="center"
-                >
-                  {(index + 1).toString() + ' - ' + color.toUpperCase()}
-                </Typography>
-              </Paper>
-            </Grid>
-          );
-        })}
+      <Grid container direction="row">
+        <Grid item xs={1}></Grid>
+        <Grid item xs={10}>
+          <Grid container direction="column" alignItems="stretch">
+            {palette.map((color, index) => {
+              return (
+                <Grid item key={color}>
+                  <Paper
+                    elevation={5}
+                    style={{
+                      backgroundColor: color,
+                    }}
+                  >
+                    <Typography
+                      style={{ color: contrastTextColor(color) }}
+                      align="center"
+                    >
+                      {(index + 1).toString() + ' - ' + color.toUpperCase()}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Grid>
       </Grid>
     );
   };
 
   return (
     <>
-      <Grid container direction="column">
-        <Grid
-          container
-          direction="row"
-          // alignItems="center"
-          // justifyContent="center"
-        >
-          <Grid xs={2} item>
-            {renderButtons()}
-          </Grid>
-          <Grid item xs={8}>
-            <Card>
-              <Grid container alignItems="center">
-                {/* justifyContent="center" */}
-                <Grid item xs={12}>
-                  <canvas width="800" height="600" ref={canvasRef} />
-                </Grid>
+      <Grid container direction="row" justify="space-between">
+        <Grid item xs={2}>
+          <Grid container direction="row">
+            <Grid item xs={1}></Grid>
+            <Grid item xs={10}>
+              <Grid container direction="column">
+                <Grid item>{renderControls()}</Grid>
+                <Grid item>{renderParamControls()}</Grid>
               </Grid>
-            </Card>
-          </Grid>
-          <Grid item xs={2}>
-            {renderPalette()}
+            </Grid>
           </Grid>
         </Grid>
+        <Grid item xs={8}>
+          <Grid container justify="space-around" ref={canvasContainerRef}>
+            <canvas width="800" height="600" ref={canvasRef} />
+          </Grid>
+        </Grid>
+        <Grid item xs={2}>
+          {renderPalette()}
+        </Grid>
+      </Grid>
 
-        <Grid item>
-          <img onLoad={drawImage} src="" ref={imgRef} alt="img" hidden={true} />
-        </Grid>
+      <Grid item>
+        <img
+          onLoad={() => drawImage({ filter: false })}
+          src=""
+          ref={imgRef}
+          alt="img"
+          hidden={true}
+        />
       </Grid>
     </>
   );
