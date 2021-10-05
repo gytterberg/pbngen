@@ -19,7 +19,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@material-ui/core';
-import { ExpandMoreIcon } from '@mui/icons-material';
+// import { ExpandMoreIcon } from '@mui/icons-material';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import rgbquant from 'rgbquant';
@@ -250,6 +250,7 @@ const Canvas = (props) => {
         </Grid>
 
         <Grid item>
+          {/* <Accordion> */}
           <FormControl component="fieldset">
             {/* <FormLabel component="legend">Display</FormLabel> */}
             <RadioGroup
@@ -388,7 +389,7 @@ const Canvas = (props) => {
 
   return (
     <>
-      <Grid container direction="row" justify="space-between">
+      <Grid container direction="row" justifyContent="space-between">
         <Grid item xs={2}>
           <Grid container direction="row">
             <Grid item xs={1}></Grid>
@@ -401,7 +402,11 @@ const Canvas = (props) => {
           </Grid>
         </Grid>
         <Grid item xs={8}>
-          <Grid container justify="space-around" ref={canvasContainerRef}>
+          <Grid
+            container
+            justifyContent="space-around"
+            ref={canvasContainerRef}
+          >
             <canvas width="800" height="600" ref={canvasRef} />
           </Grid>
         </Grid>

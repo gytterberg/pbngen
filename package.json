@@ -21,6 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "@material-ui/core": "^4.11.4",
+    "@mui/icons-material": "^5.0.1",
     "axios": "^0.21.1",
     "bcrypt": "^5.0.0",
     "canny": "^0.2.2",
@@ -50,8 +51,8 @@
     "esm": "^3.2.25",
     "mocha": "^6.2.3",
     "nodemon": "^1.19.4",
-    "react": "^16.14.0",
-    "react-dom": "^16.8.6",
+    "react": "^17",
+    "react-dom": "^17",
     "react-redux": "^7.0.1",
     "react-router-dom": "^5.0.0",
     "react-test-renderer": "^16.4.2",
