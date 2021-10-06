@@ -19,7 +19,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@material-ui/core';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import rgbquant from 'rgbquant';
