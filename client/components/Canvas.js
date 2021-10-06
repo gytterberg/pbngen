@@ -19,7 +19,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@material-ui/core';
-// import { ExpandMoreIcon } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import rgbquant from 'rgbquant';
@@ -32,16 +32,34 @@ const Canvas = (props) => {
   const [image, setImage] = useState(null);
   const [palette, setPalette] = useState([]);
   // display options: original, preprocessed, quantized, edges
-  const [display, setDisplay] = useState('original');
+  const displayModes = {
+    ORIGINAL: 'original',
+    PREPROCESSED: 'preprocessed',
+    QUANTIZED: 'quantized',
+    EDGES: 'edges',
+  };
 
-  const [params, setParams] = useState({
+  const paramNames = {
+    CONTRAST: 'contrast',
+    BLUR: 'blur',
+    COLORS: 'colors',
+    THRESHOLD: 'threshold',
+    APERTURE: 'aperture',
+    L2GRADIENT: 'l2Gradient',
+  };
+
+  const [displayMode, setDisplayMode] = useState(displayModes.ORIGINAL);
+
+  const defaultParams = {
+    // original defaults in comments
     contrast: 175, // 175
     blur: 7, // 7
-    threshold1: 50,
-    threshold2: 100,
-    apertureSize: 3,
-    l2Gradient: false,
-  });
+    colors: 16, // 16
+    threshold: [50, 100], // [50, 150]
+    aperture: 3, // 3.... doesn't like anything else
+    l2Gradient: 'rootsquares', // 'sum'
+  };
+  const [params, setParams] = useState(defaultParams);
 
   const canvasRef = useRef();
   const imgRef = useRef();
@@ -109,10 +127,7 @@ const Canvas = (props) => {
 
     drawImage({ filter: true });
 
-    const quantizerOptions = {
-      colors: 16,
-    };
-    const quantizer = new rgbquant(quantizerOptions);
+    const quantizer = new rgbquant({ colors: params.colors });
     quantizer.sample(canvas);
     let paletteRGBA = quantizer.palette(false, true);
     let palette32 = [];
@@ -148,14 +163,21 @@ const Canvas = (props) => {
       return;
     }
     quantizeImage();
-    const source = cv.imread(canvas); // load the image from <img>
+    const source = cv.imread(canvas);
     const dest = new cv.Mat();
 
     // turn image grayscale for edge detection
     cv.cvtColor(source, source, cv.COLOR_RGB2GRAY, 0);
 
     // detect edges, keep playing with parameters
-    cv.Canny(source, dest, 50, 100, 3, false);
+    cv.Canny(
+      source,
+      dest,
+      params.threshold[0],
+      params.threshold[1],
+      params.aperture,
+      params.l2Gradient === 'rootsquares' ? true : false
+    );
 
     // invert image, turn lines black
     cv.bitwise_not(dest, dest);
@@ -167,7 +189,6 @@ const Canvas = (props) => {
   };
 
   const fileUploadHandler = (event) => {
-    // setLoading(true);
     const file = event.target.files[0];
     setImage(file);
     imgRef.current.src = window.URL.createObjectURL(file);
@@ -183,31 +204,49 @@ const Canvas = (props) => {
    *   vv Event handlers
    */
 
-  const handleParamChange = (param, value) => {
-    params[param] = value;
-    setParams(params);
-    setDisplay('preprocessed');
-    preprocessImage();
-  };
+  // const handleParamChange = (param, value) => {
+  // setParams({ ...params, [param]: value })
+  // switch (param) {
+  //   case paramNames.CONTRAST:
+  //   case paramNames.BLUR:
+  //     setDisplay(displayModes.PREPROCESSED);
+  //     preprocessImage();
+  //     break;
+  //   case paramNames.COLORS:
+  //     setDisplay(displayModes.QUANTIZED);
+  //     break;
+  //   case paramNames.APERTURE:
+  //   case paramNames.THRESHOLD:
+  //   case paramNames.L2GRADIENT:
+  //     setDisplay(displayModes.EDGES);
+  //     break;
+  // }
+  // };
 
-  const handleDisplayChange = (value) => {
-    // display options: original, preprocessed, quantized, edges
-    setDisplay(value);
-    switch (value) {
-      case 'original':
+  // useEffect(() => {}, [params.CONTRAST, params.BLUR]);
+
+  // watch displayMode and render appropriate display
+  useEffect(() => {
+    if (displayMode === '') {
+      return;
+    }
+    console.log('In useEffect on displayMode, value:');
+    console.log(displayMode);
+    switch (displayMode) {
+      case displayModes.ORIGINAL:
         drawImage({ filter: false });
         break;
-      case 'preprocessed':
+      case displayModes.PREPROCESSED:
         preprocessImage();
         break;
-      case 'quantized':
+      case displayModes.QUANTIZED:
         quantizeImage();
         break;
-      case 'edges':
+      case displayModes.EDGES:
         processEdges();
         break;
     }
-  };
+  }, [displayMode]);
 
   /*
    *   ^^ End event handlers
@@ -222,7 +261,6 @@ const Canvas = (props) => {
   const renderControls = () => {
     return (
       <Grid container direction="column" alignItems="stretch">
-        {/* row container for buttons */}
         <Grid item>
           <input
             hidden
@@ -241,8 +279,7 @@ const Canvas = (props) => {
             fullWidth
             variant="contained"
             onClick={() => {
-              setDisplay('edges');
-              processEdges();
+              setDisplayMode(displayModes.EDGES);
             }}
           >
             Process image
@@ -250,96 +287,168 @@ const Canvas = (props) => {
         </Grid>
 
         <Grid item>
-          {/* <Accordion> */}
-          <FormControl component="fieldset">
-            {/* <FormLabel component="legend">Display</FormLabel> */}
-            <RadioGroup
-              aria-label="display"
-              value={display}
-              name="radio-buttons-group"
-              onChange={(event, value) => handleDisplayChange(value)}
-            >
-              {console.log('Value of display: ' + display)}
-              <FormControlLabel
-                value="original"
-                control={<Radio />}
-                label="Original image"
-              />
-              <FormControlLabel
-                value="preprocessed"
-                control={<Radio />}
-                label="Preprocessed image"
-              />
-              <FormControlLabel
-                value="quantized"
-                control={<Radio />}
-                label="Quantized image"
-              />
-              <FormControlLabel
-                value="edges"
-                control={<Radio />}
-                label="Final image"
-              />
-            </RadioGroup>
-          </FormControl>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="body2">View stages</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <FormControl component="fieldset">
+                <RadioGroup
+                  aria-label="display"
+                  value={displayMode}
+                  name="radio-buttons-group"
+                  onChange={(event, value) => setDisplayMode(value)}
+                >
+                  <FormControlLabel
+                    value={displayModes.ORIGINAL}
+                    control={<Radio />}
+                    label="Original image"
+                  />
+                  <FormControlLabel
+                    value={displayModes.PREPROCESSED}
+                    control={<Radio />}
+                    label="Preprocessed image"
+                  />
+                  <FormControlLabel
+                    value={displayModes.QUANTIZED}
+                    control={<Radio />}
+                    label="Quantized image"
+                  />
+                  <FormControlLabel
+                    value={displayModes.EDGES}
+                    control={<Radio />}
+                    label="Final image"
+                  />
+                </RadioGroup>
+              </FormControl>
+            </AccordionDetails>
+          </Accordion>
         </Grid>
       </Grid>
     );
   };
 
   const renderParamControls = () => {
-    // param: contrast
-    // param: blur
     return (
-      <Grid container direction="row">
-        <Grid item xs={1}></Grid>
-        <Grid item xs={10}>
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="body2">Processing parameters</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
           <Grid container direction="column" alignItems="stretch">
             <Grid item>
               <Typography>Contrast</Typography>
               <Slider
-                key={'slider-contrast-' + params.contrast}
-                // value={params.contrast}
-                defaultValue={params.contrast}
+                value={params.contrast}
                 min={0}
                 max={200}
                 valueLabelDisplay="auto"
                 onChange={(event, value) =>
-                  handleParamChange('contrast', value)
+                  setParams({ ...params, [paramNames.CONTRAST]: value })
                 }
+                onChangeCommitted={() => {
+                  setDisplayMode(''); // is this hacky and how badly so?
+                  setDisplayMode(displayModes.PREPROCESSED);
+                }}
               />
             </Grid>
 
             <Grid item>
               <Typography>Blur</Typography>
               <Slider
-                key={'slider-blur-' + params.blur}
-                // value={params.contrast}
-                defaultValue={params.blur}
+                value={params.blur}
                 min={0}
                 max={20}
                 valueLabelDisplay="auto"
-                onChange={(event, value) => handleParamChange('blur', value)}
+                onChange={(event, value) =>
+                  setParams({ ...params, [paramNames.BLUR]: value })
+                }
+                onChangeCommitted={() => {
+                  setDisplayMode(''); // is this hacky and how badly so?
+                  setDisplayMode(displayModes.PREPROCESSED);
+                }}
               />
             </Grid>
 
             <Grid item>
-              <Typography>Contrast</Typography>
+              <Typography>Colors</Typography>
               <Slider
-                key={'slider' + params.contrast}
-                // value={params.contrast}
-                defaultValue={params.contrast}
+                value={params.colors}
+                min={4}
+                max={32}
+                valueLabelDisplay="auto"
+                onChange={(event, value) =>
+                  setParams({ ...params, [paramNames.COLORS]: value })
+                }
+                onChangeCommitted={() => {
+                  setDisplayMode(''); // is this hacky and how badly so?
+                  setDisplayMode(displayModes.QUANTIZED);
+                }}
+              />
+            </Grid>
+
+            {/* openCV doesn't like any aperture other than 3... crashes
+            <Grid item>
+              <Typography>Blur aperture</Typography>
+              <Slider
+                value={params.aperture}
                 min={0}
                 max={200}
                 valueLabelDisplay="auto"
                 onChange={(event, value) =>
-                  handleParamChange('contrast', value)
+                  setParams({ ...params, [paramNames.APERTURE]: value })
                 }
+                onChangeCommitted={() => {
+                  setDisplayMode(''); // is this hacky and how badly so?
+                  setDisplayMode(displayModes.EDGES);
+                }}
+              />
+            </Grid> */}
+
+            <Grid item>
+              <Typography>Hysteresis threshold range</Typography>
+              <Slider
+                value={params.threshold}
+                min={0}
+                max={200}
+                valueLabelDisplay="auto"
+                onChange={(event, value) =>
+                  setParams({ ...params, [paramNames.THRESHOLD]: value })
+                }
+                onChangeCommitted={() => {
+                  setDisplayMode(''); // is this hacky and how badly so?
+                  setDisplayMode(displayModes.EDGES);
+                }}
               />
             </Grid>
+
+            <Grid item>
+              <FormControl component="fieldset">
+                <Typography>Gradient magnitude function</Typography>
+                <RadioGroup
+                  value={params.l2Gradient}
+                  onChange={(event, value) => {
+                    setParams({ ...params, [paramNames.L2GRADIENT]: value });
+                    setDisplayMode(''); // is this hacky and how badly so?
+                    setDisplayMode(displayModes.EDGES);
+                  }}
+                >
+                  <FormControlLabel
+                    value="sum"
+                    control={<Radio />}
+                    label="Sum"
+                  />
+                  <FormControlLabel
+                    value="rootsquares"
+                    control={<Radio />}
+                    label="Root of squares"
+                  />
+                </RadioGroup>
+              </FormControl>
+            </Grid>
           </Grid>
-        </Grid>
-      </Grid>
+        </AccordionDetails>
+      </Accordion>
     );
   };
 
